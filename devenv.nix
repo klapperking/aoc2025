@@ -10,7 +10,10 @@ in
   cachix.enable = false;
   difftastic.enable = true;
 
-  packages = [ pkgs-unstable.git ];
+  packages = [
+    pkgs-unstable.git
+    pkgs-unstable.just
+  ];
 
   languages.python = {
     enable = true;
