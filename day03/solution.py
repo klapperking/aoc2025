@@ -1,5 +1,6 @@
 import argparse
 import sys
+from copy import copy
 
 
 def parse_input(input_data: str) -> list[list[int]]:
@@ -11,32 +12,55 @@ def parse_input(input_data: str) -> list[list[int]]:
     return banks
 
 
-def calculate_solution(banks: list[list[int]]) -> int:
+def calculate_solution(banks: list[list[int]], battery_sequence_size: int = 2) -> int:
     joltage = 0
 
     for bank in banks:
-        first = max(bank)
-        idx = bank.index(first)
-        if idx == len(bank) - 1:
-            first = max(bank[:-1])
+        joltage_components: list[int] = []
+        remaining = battery_sequence_size
 
-        second = max(bank[bank.index(first) + 1 :])
+        check_num = 9
+        check_offset = 0
 
-        joltage += int("".join([str(first), str(second)]))
+        while remaining >= 1:
+            found_idx = (
+                bank[check_offset:].index(check_num)
+                if check_num in bank[check_offset:]
+                else -1
+            )
+
+            # if not found, go to next number
+            if found_idx == -1:
+                check_num -= 1
+                continue
+
+            # if found but not enough remaining space, check next number
+            if len(bank[check_offset:]) - found_idx < remaining:
+                check_num -= 1
+                continue
+
+            # if enough space, change offest and continue
+            joltage_components.append(check_num)
+
+            check_offset += found_idx + 1
+            check_num = 9
+            remaining -= 1
+
+        joltage += int("".join([str(x) for x in joltage_components]))
 
     return joltage
 
 
 def part1(input_data: str) -> None:
-    batteries = parse_input(input_data)
-    result = calculate_solution(batteries)
+    battery_banks = parse_input(input_data)
+    result = calculate_solution(battery_banks)
     print(result)
 
 
-# def part2(input_data: str) -> None:
-#     ranges = parse_input(input_data)
-#     result = calculate_solution(ranges, is_invalid_id_p2)
-#     print(result)
+def part2(input_data: str) -> None:
+    battery_banks = parse_input(input_data)
+    result = calculate_solution(battery_banks, 12)
+    print(result)
 
 
 if __name__ == "__main__":
@@ -49,5 +73,5 @@ if __name__ == "__main__":
 
     if args.part == 1:
         part1(input_data)
-    # else:
-    #     part2(input_data)
+    else:
+        part2(input_data)
