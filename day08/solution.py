@@ -34,12 +34,12 @@ def find_circuit_root(parent: list[int], x: int) -> int:
 
 def connect_circuits(
     node_parents: list[int], circuit_sizes: list[int], node_x: int, node_y: int
-):
+) -> bool:
     root_circuit_x = find_circuit_root(node_parents, node_x)
     root_circuit_y = find_circuit_root(node_parents, node_y)
 
     if root_circuit_x == root_circuit_y:
-        return
+        return False
 
     # attach smaller circuit to larger one -> fewer traversals to circuit root
     if circuit_sizes[root_circuit_x] < circuit_sizes[root_circuit_y]:
@@ -48,6 +48,8 @@ def connect_circuits(
     else:
         node_parents[root_circuit_y] = root_circuit_x
         circuit_sizes[root_circuit_x] += circuit_sizes[root_circuit_y]
+
+    return True
 
 
 def get_circuit_sizes(parent: list[int], size: list[int]) -> list[int]:
@@ -74,24 +76,15 @@ def generate_edges(positions: list[tuple[int, int, int]]) -> list[tuple[int, int
     return edges
 
 
-def connect_closest_pairs(
-    edges: list[tuple[int, int]],
-    positions: list[tuple[int, int, int]],
-    max_pairs: int,
-) -> tuple[list[int], list[int]]:
-    length = len(positions)
-    node_parents = list(range(length))
-    circuit_sizes = [1] * length
-    pairs_processed = 0
-
-    for node_x, node_y in edges:
-        if pairs_processed >= max_pairs:
-            break
-
-        connect_circuits(node_parents, circuit_sizes, node_x, node_y)
-        pairs_processed += 1
-
-    return node_parents, circuit_sizes
+def prepare_sorted_edges(
+    input_data: str,
+) -> tuple[list[tuple[int, int, int]], list[tuple[int, int]]]:
+    positions = parse_input(input_data)
+    edges = generate_edges(positions)
+    edges.sort(
+        key=lambda edge: euclidian_distance(positions[edge[0]], positions[edge[1]])
+    )
+    return positions, edges
 
 
 def calculate_result(circuit_sizes: list[int]) -> int:
@@ -103,15 +96,49 @@ def calculate_result(circuit_sizes: list[int]) -> int:
 
 
 def part1(input_data: str) -> None:
-    positions = parse_input(input_data)
-    edges = generate_edges(positions)
-    edges.sort(
-        key=lambda edge: euclidian_distance(positions[edge[0]], positions[edge[1]])
-    )
+    positions, edges = prepare_sorted_edges(input_data)
 
-    parent, size = connect_closest_pairs(edges, positions, PART1_MAX_CONNECTIONS)
+    length = len(positions)
+    parent = list(range(length))
+    size = [1] * length
+
+    pairs_processed = 0
+    for node1, node2 in edges:
+        if pairs_processed >= PART1_MAX_CONNECTIONS:
+            break
+
+        connect_circuits(parent, size, node1, node2)
+        pairs_processed += 1
+
     circuit_sizes = get_circuit_sizes(parent, size)
     result = calculate_result(circuit_sizes)
+
+    print(result)
+
+
+def part2(input_data: str) -> None:
+    positions, edges = prepare_sorted_edges(input_data)
+
+    length = len(positions)
+    parent = list(range(length))
+    size = [1] * length
+
+    last_connected_pair = None
+
+    for node1, node2 in edges:
+        # Try to merge the circuits
+        if connect_circuits(parent, size, node1, node2):
+            last_connected_pair = (node1, node2)
+
+            # check if all nodes are in one circuit
+            root = find_circuit_root(parent, node1)
+            if size[root] == length:
+                break
+
+    if last_connected_pair is None:
+        raise ValueError("Could not connect all nodes into one circuit")
+
+    result = positions[last_connected_pair[0]][0] * positions[last_connected_pair[1]][0]
 
     print(result)
 
@@ -127,4 +154,4 @@ if __name__ == "__main__":
     if args.part == 1:
         part1(input_data)
     else:
-        pass
+        part2(input_data)
